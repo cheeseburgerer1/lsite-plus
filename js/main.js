@@ -2308,6 +2308,7 @@ Game.Launch=function()
 			Game.prefs.fullscreen=0;//if true, Steam game will be fullscreen
 			Game.prefs.screenreader=0;//if true, add some DOM stuff to facilitate screenreader interaction (requires reload)
 			Game.prefs.discordPresence=1;//if true and applicable, show game activity in Discord status
+			Game.prefs.superOptimized=0;//reuse click resources without reducing visual effects
 		}
 		Game.DefaultPrefs();
 		
@@ -2601,7 +2602,41 @@ Game.Launch=function()
 		Game.heralds=0;
 		
 /* Timed heralds for this site's local game. Embedded into dist/index.html. */
-ConfigureTimedHeralds(Game);
+/* COOKIECLICKER_TIMED_HERALDS_START */
+(function () {
+    var minimum = 62;
+    var maximum = 81;
+    var period = 30 * 60 * 1000;
+    var cycle = (maximum - minimum) * 2;
+
+    // A shared wall-clock schedule prevents reloads from rerolling the bonus.
+    Game.timedHeraldCount = function (time) {
+        var step = Math.floor(time / period);
+        var phase = ((step % cycle) + cycle) % cycle;
+        return minimum + Math.min(phase, cycle - phase);
+    };
+
+    Game.UpdateHeralds = function () {
+        clearTimeout(Game.heraldsTimer);
+        var now = Date.now();
+        var count = Game.timedHeraldCount(now);
+        if (Game.heralds !== count) {
+            Game.heralds = count;
+            Game.recalculateGains = 1;
+        }
+        var counter = l('heraldsAmount');
+        if (counter) counter.textContent = count;
+        Game.externalDataLoaded = true;
+        Game.heraldsTimer = setTimeout(Game.UpdateHeralds, period - ((now % period + period) % period) + 1);
+    };
+
+    // Refresh immediately after sleep or a background-tab timer delay.
+    AddEvent(window, 'focus', function () { Game.UpdateHeralds(); });
+    AddEvent(document, 'visibilitychange', function () {
+        if (!document.hidden) Game.UpdateHeralds();
+    });
+})();
+/* COOKIECLICKER_TIMED_HERALDS_END */
 
 		Game.FetchGrandmaNames=function()
 		{
@@ -2883,6 +2918,7 @@ ConfigureTimedHeralds(Game);
 			(Game.prefs.fullscreen?'1':'0')+
 			(Game.prefs.screenreader?'1':'0')+
 			(Game.prefs.discordPresence?'1':'0')+
+			(Game.prefs.superOptimized?'1':'0')+
 			'';
 			str2=pack3(str2);
 			str+=str2+'|';
@@ -3080,6 +3116,8 @@ ConfigureTimedHeralds(Game);
 		}
 		Game.LoadSave=function(data,ignoreVersionIssues)
 		{
+			Game.cookieParticleIconsCache=null;
+			Game.keyboardClickPosition=null;
 			var str='';
 			if (typeof data!=='undefined') str=unescape(data);
 			else
@@ -3187,6 +3225,8 @@ ConfigureTimedHeralds(Game);
 						Game.prefs.fullscreen=spl[24]?parseInt(spl[24]):0;if (App) App.setFullscreen(Game.prefs.fullscreen);
 						Game.prefs.screenreader=spl[25]?parseInt(spl[25]):0;
 						Game.prefs.discordPresence=spl[26]?parseInt(spl[26]):1;
+						Game.prefs.superOptimized=spl[27]==='1'?1:0;
+						if (Game.optimizedClickAudio) Game.optimizedClickAudio.idle();
 						BeautifyAll();
 						spl=str[4].split(';');//cookies and lots of other stuff
 						Game.cookies=parseFloat(spl[0]);
@@ -3641,6 +3681,8 @@ ConfigureTimedHeralds(Game);
 		=======================================================================================*/
 		Game.Reset=function(hard)
 		{
+			Game.cookieParticleIconsCache=null;
+			Game.keyboardClickPosition=null;
 			Game.T=0;
 			Game.realT=0;
 			
@@ -4946,14 +4988,86 @@ ConfigureTimedHeralds(Game);
 		Game.BigCookieSizeD=0;
 		Game.BigCookieSizeT=1;
 		Game.cookieClickSound=Math.floor(Math.random()*7)+1;
+        // Reuse decoded click samples instead of reloading an audio element per click.
+        Game.optimizedClickAudio=(function(){
+            var context=null;
+            var buffers=Object.create(null);
+            var loading=Object.create(null);
+            var active=0;
+            function unlock(){
+                var AudioContext=window.AudioContext||window.webkitAudioContext;
+                if (!AudioContext) return false;
+                try {
+                    if (!context) context=new AudioContext();
+                    if (context.state==='suspended') context.resume().catch(function(){});
+                    return context.state==='running';
+                } catch (ignore) {return false;}
+            }
+            function load(url){
+                if (!context || loading[url] || typeof buffers[url]!=='undefined') return;
+                loading[url]=true;
+                var source=(Game.resPath||'')+url;
+                if (typeof CookieClickerHTML!=='undefined') source=CookieClickerHTML.asset(source);
+                fetch(source).then(function(response){
+                    if (!response.ok) throw new Error('Click sample unavailable');
+                    return response.arrayBuffer();
+                }).then(function(bytes){return context.decodeAudioData(bytes);}).then(function(buffer){
+                    buffers[url]=buffer;
+                    delete loading[url];
+                }).catch(function(){buffers[url]=null;delete loading[url];});
+            }
+            function prepare(){
+                unlock();
+                for (var i=1;i<=7;i++) load('snd/click'+(Game.prefs.cookiesound?'b':'')+i+'.mp3');
+            }
+            function idle(){
+                if (!active && context && !Game.prefs.superOptimized && context.state==='running') context.suspend().catch(function(){});
+            }
+            return {
+                prepare:prepare,
+                idle:idle,
+                play:function(url,volume){
+                    if (!Game.volume) return true;
+                    if (!context) prepare();
+                    if (!unlock()) return false;
+                    var buffer=buffers[url];
+                    if (!buffer) {load(url);return false;}
+                    // Match the original sound pool's maximum of twelve simultaneous voices.
+                    if (active>=12) return true;
+                    try {
+                        var sample=context.createBufferSource();
+                        var gain=context.createGain();
+                        sample.buffer=buffer;
+                        gain.gain.value=Math.pow(volume*Game.volume/100,2);
+                        sample.connect(gain);
+                        gain.connect(context.destination);
+                        sample.onended=function(){active--;sample.disconnect();gain.disconnect();idle();};
+                        sample.start();
+                        active++;
+                        return true;
+                    } catch (ignore) {
+                        if (sample) sample.disconnect();
+                        if (gain) gain.disconnect();
+                        return false;
+                    }
+                }
+            };
+        })();
+        Game.ToggleSuperOptimized=function(){
+            Game.cookieParticleIconsCache=null;
+            Game.keyboardClickPosition=null;
+            if (Game.prefs.superOptimized) Game.optimizedClickAudio.prepare();
+            else Game.optimizedClickAudio.idle();
+        };
+
 		Game.playCookieClickSound=function()
 		{
-			if (Game.prefs.cookiesound) PlaySound('snd/clickb'+(Game.cookieClickSound)+'.mp3',0.5);
-			else PlaySound('snd/click'+(Game.cookieClickSound)+'.mp3',0.5);
+			var url='snd/click'+(Game.prefs.cookiesound?'b':'')+Game.cookieClickSound+'.mp3';
+			if (!Game.prefs.superOptimized || !Game.optimizedClickAudio.play(url,0.5)) PlaySound(url,0.5);
 			Game.cookieClickSound+=Math.floor(Math.random()*4)+1;
 			if (Game.cookieClickSound>7) Game.cookieClickSound-=7;
 		}
-		Game.ClickCookie=function(e,amount)
+		Game.ClickCookie=function(e,amount,fromKeyboard)
 		{
 			var now=Date.now();
 			if (e) e.preventDefault();
@@ -4969,12 +5083,33 @@ ConfigureTimedHeralds(Game);
 				var amount=amount?amount:Game.computedMouseCps;
 				Game.Earn(amount);
 				Game.handmadeCookies+=amount;
+				var clickX=Game.mouseX;
+				var clickY=Game.mouseY;
+				if (fromKeyboard && (Game.prefs.particles || Game.prefs.numbers))
+				{
+					// Convert the button center to the particle canvas coordinates.
+					var position=Game.keyboardClickPosition;
+					if (!Game.prefs.superOptimized || !position || position.draw!==Game.drawT || position.scale!==Game.scale)
+					{
+						var center=getCenter(bigCookie);
+						var canvasBounds=getBounds(l('backgroundLeftCanvas'));
+						position={x:center[0]-canvasBounds.left,y:center[1]-canvasBounds.top,draw:Game.drawT,scale:Game.scale};
+						Game.keyboardClickPosition=position;
+					}
+					clickX=position.x;
+					clickY=position.y;
+				}
 				if (Game.prefs.particles)
 				{
 					Game.particleAdd();
-					Game.particleAdd(Game.mouseX,Game.mouseY,Math.random()*4-2,Math.random()*-2-2,Math.random()*0.5+0.75,1,2);
+					Game.particleAdd(clickX,clickY,Math.random()*4-2,Math.random()*-2-2,Math.random()*0.5+0.75,1,2);
 				}
-				if (Game.prefs.numbers) Game.particleAdd(Game.mouseX+Math.random()*8-4,Game.mouseY-8+Math.random()*8-4,0,-2,1,4,2,'','+'+Beautify(amount,1));
+				if (Game.prefs.numbers)
+				{
+					var numberX=fromKeyboard?clickX:clickX+Math.random()*8-4;
+					var numberY=fromKeyboard?clickY:clickY-8+Math.random()*8-4;
+					Game.particleAdd(numberX,numberY,0,-2,1,4,2,'','+'+Beautify(amount,1));
+				}
 				
 				Game.runModHook('click');
 				
@@ -5025,6 +5160,8 @@ ConfigureTimedHeralds(Game);
 			Game.lastActivity=Game.time;
 		}
 		var bigCookie=l('bigCookie');
+		window.addEventListener('resize',function(){Game.keyboardClickPosition=null;});
+		window.addEventListener('scroll',function(){Game.keyboardClickPosition=null;},true);
 		if (Game.prefs.screenreader)
 		{
 			bigCookie.ariaLabelledby='bigCookieLabel';
@@ -5084,7 +5221,21 @@ ConfigureTimedHeralds(Game);
 			Game.keys[e.keyCode]=0;
 		});
 		AddEvent(window,'keydown',function(e){
-            CookieClickerSpacebar(e);
+            // Space clicks the cookie while normal text entry and controls keep their behavior.
+            if ((e.code==='Space' || e.keyCode===32) && Game.ready && !Game.promptOn &&
+                !Game.OnAscend && !Game.AscendTimer && !e.ctrlKey && !e.altKey && !e.metaKey && !e.isComposing)
+            {
+                var target=e.target;
+                var editing=target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+                var control=target && target.closest && target.closest('button,a,[role="button"]');
+                if (!editing && (!control || control.id==='bigCookie'))
+                {
+                    e.preventDefault();
+                    Game.lastActivity=Game.time;
+                    Game.ClickCookie(null,0,true);
+                }
+            }
+
 			if (Game.promptOn)
 			{
 				if (e.keyCode==9)
@@ -6160,6 +6311,22 @@ ConfigureTimedHeralds(Game);
 				}
 			}
 		}
+		Game.getCookieParticleIcons=function()
+		{
+			var cached=Game.cookieParticleIconsCache;
+			if (!cached || cached.upgrades!==Game.Upgrades || cached.owned!==Game.UpgradesOwned || (!Game.prefs.superOptimized && cached.tick!==Game.T))
+			{
+				var icons=[[10,0]];
+				for (var name in Game.Upgrades)
+				{
+					var cookie=Game.Upgrades[name];
+					if (cookie.bought>0 && cookie.pool=='cookie') icons.push(cookie.icon);
+				}
+				cached={icons:icons,owned:Game.UpgradesOwned,upgrades:Game.Upgrades,tick:Game.T};
+				Game.cookieParticleIconsCache=cached;
+			}
+			return cached.icons;
+		};
 		Game.particleAdd=function(x,y,xd,yd,size,dur,z,pic,text)
 		{
 			//Game.particleAdd(pos X,pos Y,speed X,speed Y,size (multiplier),duration (seconds),layer,picture,text);
@@ -6204,13 +6371,7 @@ ConfigureTimedHeralds(Game);
 					if (Game.season=='fools') pic='smallDollars.png';
 					else
 					{
-						var cookies=[[10,0]];
-						for (var i in Game.Upgrades)
-						{
-							var cookie=Game.Upgrades[i];
-							if (cookie.bought>0 && cookie.pool=='cookie') cookies.push(cookie.icon);
-						}
-						me.picPos=choose(cookies);
+						me.picPos=choose(Game.getCookieParticleIcons());
 						if (Game.bakeryName.toLowerCase()=='ortiel' || Math.random()<1/10000) me.picPos=[17,5];
 						pic='icons.png';
 					}
@@ -6879,6 +7040,7 @@ ConfigureTimedHeralds(Game);
 							'<br>'+
 							(App?Game.WritePrefButton('bgMusic','bgMusicButton',loc("Music in background")+ON,loc("Music in background")+OFF,'')+'<label>('+loc("music will keep playing even when the game window isn't focused")+')</label><br>':'')+
 							(App?Game.WritePrefButton('fullscreen','fullscreenButton',loc("Fullscreen")+ON,loc("Fullscreen")+OFF,'Game.ToggleFullscreen();')+'<br>':'')+
+							Game.WritePrefButton('superOptimized','superOptimizedButton','Super optimized'+ON,'Super optimized'+OFF,'Game.ToggleSuperOptimized();')+'<label>(smoother rapid clicking; keeps the same visuals)</label><br>'+
 							Game.WritePrefButton('fancy','fancyButton',loc("Fancy graphics")+ON,loc("Fancy graphics")+OFF,'Game.ToggleFancy();')+'<label>('+loc("visual improvements; disabling may improve performance")+')</label><br>'+
 							Game.WritePrefButton('filters','filtersButton',loc("CSS filters")+ON,loc("CSS filters")+OFF,'Game.ToggleFilters();')+'<label>('+(EN?'cutting-edge visual improvements; disabling may improve performance':loc("visual improvements; disabling may improve performance"))+')</label><br>'+
 							Game.WritePrefButton('particles','particlesButton',loc("Particles")+ON,loc("Particles")+OFF)+(EN?'<label>(cookies falling down, etc; disabling may improve performance)</label>':'')+'<br>'+
@@ -9982,6 +10144,7 @@ ConfigureTimedHeralds(Game);
 		
 		Game.RebuildUpgrades=function()//recalculate the upgrades you can buy
 		{
+			Game.cookieParticleIconsCache=null;
 			Game.upgradesToRebuild=0;
 			var list=[];
 			for (var i in Game.Upgrades)
@@ -17043,7 +17206,13 @@ ConfigureTimedHeralds(Game);
 			
 			if (Game.prefs.monospace) str='<span class="monospace">'+str+'</span>';
 			str=str+'<div id="cookiesPerSecond"'+(Game.cpsSucked>0?' class="wrinkled"':'')+'>'+loc("per second:")+' '+Beautify(Game.cookiesPs*(1-Game.cpsSucked),1)+'</div>';
-			l('cookies').innerHTML=str;
+			var cookieDisplay=l('cookies');
+			if (Game.cookieDisplayHTML!==str || Game.cookieDisplayElement!==cookieDisplay)
+			{
+				cookieDisplay.innerHTML=str;
+				Game.cookieDisplayHTML=str;
+				Game.cookieDisplayElement=cookieDisplay;
+			}
 			Timer.track('cookie amount');
 			
 			for (var i=0;i<Game.ObjectsById.length;i++)

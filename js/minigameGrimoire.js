@@ -456,7 +456,7 @@ M.launch=function()
 		parseFloat(M.magic)+' '+
 		parseInt(Math.floor(M.spellsCast))+' '+
 		parseInt(Math.floor(M.spellsCastTotal))+
-		' '+parseInt(M.parent.onMinigame?'1':'0')
+		' '+parseInt(M.parent.onMinigame?'1':'0')+' '+Date.now()
 		;
 		return str;
 	}
@@ -472,6 +472,21 @@ M.launch=function()
 		M.spellsCast=parseInt(spl[i++]||0);
 		M.spellsCastTotal=parseInt(spl[i++]||0);
 		var on=parseInt(spl[i++]||0);if (on && Game.ascensionMode!=1) M.parent.switchMinigame(1);
+		// Replay the normal refill ticks since this magic amount was saved.
+		// Older saves use the game's existing save timestamp.
+		var savedAt=Number(spl[i++]||Game.lastDate);
+		if (isFinite(savedAt) && savedAt>0) M.refillOffline((Date.now()-savedAt)/1000);
+	}
+	M.refillOffline=function(seconds)
+	{
+		if (!isFinite(seconds) || seconds<=0) return;
+		var ticks=Math.floor(seconds*Game.fps);
+		M.magic=Math.max(0,Math.min(M.magic,M.magicM));
+		for (var tick=0;tick<ticks && M.magic<M.magicM;tick++)
+		{
+			M.magic+=Math.max(0.002,Math.pow(M.magic/Math.max(M.magicM,100),0.5))*0.002;
+		}
+		M.magic=Math.min(M.magic,M.magicM);
 	}
 	M.reset=function()
 	{
