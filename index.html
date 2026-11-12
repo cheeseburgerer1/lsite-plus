@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Browse featured games and the LSITE PLUS game library.">
-  <meta name="theme-color" content="#0b0b0d">
+  <meta name="theme-color" content="#2c2a30">
   <title>LSITE PLUS</title>
   <link rel="stylesheet" href="menu.css">
   <script src="menu.js" defer></script>
@@ -28,14 +28,18 @@
     <section id="featured" aria-labelledby="featured-title">
       <div class="section-heading">
         <h1 id="featured-title">Featured Games</h1>
-        <div class="carousel-controls" aria-label="Featured game controls">
+      </div>
+      <div class="carousel" id="featured-carousel">
+        <div class="carousel-track" id="featured-track" role="region" aria-label="Featured games carousel" tabindex="0"></div>
+        <div class="carousel-controls" role="group" aria-label="Featured game controls">
           <span id="slide-count" aria-live="polite">01 / 07</span>
-          <button class="arrow-button" id="previous" type="button" aria-label="Previous featured game" aria-controls="featured-track" aria-disabled="true"><span aria-hidden="true">&larr;</span></button>
-          <button class="arrow-button" id="next" type="button" aria-label="Next featured game" aria-controls="featured-track"><span aria-hidden="true">&rarr;</span></button>
+          <div class="carousel-dots" id="carousel-dots" role="group" aria-label="Select a featured game"></div>
+          <div class="carousel-arrows">
+            <button class="arrow-button" id="previous" type="button" aria-label="Previous featured game" aria-controls="featured-track" aria-disabled="true"><span aria-hidden="true">&larr;</span></button>
+            <button class="arrow-button" id="next" type="button" aria-label="Next featured game" aria-controls="featured-track"><span aria-hidden="true">&rarr;</span></button>
+          </div>
         </div>
       </div>
-      <div class="carousel-track" id="featured-track" role="region" aria-label="Featured games carousel" tabindex="0"></div>
-      <div class="carousel-dots" id="carousel-dots" aria-label="Select a featured game"></div>
     </section>
 
     <section id="games" aria-labelledby="games-title">
@@ -54,8 +58,22 @@
     </span>
     <span class="card-caption">
       <span class="card-title"></span>
-      <span class="card-action" aria-hidden="true"><span class="play-icon"></span><span class="action-label"></span></span>
+      <span class="card-action" aria-hidden="true"><span class="play-icon"></span></span>
     </span>
+  </template>
+
+  <template id="featured-template">
+    <div class="featured-card" role="group" aria-roledescription="slide">
+      <div class="featured-copy">
+        <h2 class="featured-title"></h2>
+      </div>
+      <div class="featured-preview" aria-hidden="true">
+        <span class="preview-glass">
+          <span class="missing-icon"><span></span></span>
+          <span class="missing-icon icon-reflection"><span></span></span>
+        </span>
+      </div>
+    </div>
   </template>
 
   <dialog id="game-dialog" aria-labelledby="dialog-title">
