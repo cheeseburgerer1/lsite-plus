@@ -1,7 +1,17 @@
+const playableGames = [
+  { title: 'Cookie Clicker', url: 'js/index.html' },
+  {
+    title: 'PolyTrack Ranked',
+    description: 'Race against the clock in an unofficial PolyTrack mod.',
+    url: 'https://lsite-plus-racing.onrender.com/',
+    external: true,
+  },
+];
 const games = Array.from({ length: 18 }, (_, index) => ({
-  title: index === 0 ? 'Cookie Clicker' : 'Placeholder Game',
+  title: 'Placeholder Game',
   description: 'Placeholder text',
-  url: index === 0 ? 'js/index.html' : null,
+  url: null,
+  ...playableGames[index],
   slot: index + 1,
 }));
 const featuredGames = games.slice(0, 7);
@@ -22,6 +32,7 @@ function createGameControl(game) {
   control.setAttribute('aria-label', game.url ? `Play ${game.title}` : `Play ${game.title} ${game.slot}`);
   if (game.url) {
     control.href = game.url;
+    if (game.external) control.rel = 'noreferrer';
   } else {
     control.type = 'button';
     control.addEventListener('click', () => dialog.showModal());
