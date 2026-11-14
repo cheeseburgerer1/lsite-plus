@@ -3,18 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Browse featured games and the LSITE PLUS game library.">
-  <meta name="theme-color" content="#2c2a30">
-  <title>LSITE PLUS</title>
+  <meta name="description" content="Browse featured games and the lsite plus game library.">
+  <meta name="theme-color" content="#25252b">
+  <title>lsite plus</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400..900&amp;display=swap">
   <link rel="stylesheet" href="menu.css">
   <script src="menu.js" defer></script>
 </head>
 <body id="top">
   <header class="site-header">
     <div class="container header-inner">
-      <a class="brand" href="#top" aria-label="LSITE PLUS home">
+      <a class="brand" href="#top" aria-label="lsite plus home">
         <span class="brand-mark" aria-hidden="true"></span>
-        <span>LSITE <em>PLUS</em></span>
+        <span>lsite <em>plus</em></span>
       </a>
       <nav class="site-nav" aria-label="Main navigation">
         <a href="#top">Home</a>
@@ -57,8 +60,11 @@
       <span class="missing-icon"><span></span></span>
     </span>
     <span class="card-caption">
-      <span class="card-title"></span>
-      <span class="card-action" aria-hidden="true"><span class="play-icon"></span></span>
+      <span class="card-copy">
+        <span class="card-title"></span>
+        <span class="card-description"></span>
+      </span>
+      <span class="card-action" aria-hidden="true"><span class="play-icon"></span>Play</span>
     </span>
   </template>
 
@@ -66,6 +72,7 @@
     <div class="featured-card" role="group" aria-roledescription="slide">
       <div class="featured-copy">
         <h2 class="featured-title"></h2>
+        <p class="featured-description"></p>
       </div>
       <div class="featured-preview" aria-hidden="true">
         <span class="preview-glass">
