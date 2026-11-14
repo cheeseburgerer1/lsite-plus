@@ -2,7 +2,7 @@ const playableGames = [
   { title: 'Cookie Clicker', url: 'js/index.html' },
   {
     title: 'PolyTrack Ranked',
-    description: 'Race against the clock in an unofficial PolyTrack mod.',
+    description: 'Race against the clock on winding tracks.',
     url: 'https://lsite-plus-racing.onrender.com/',
     external: true,
   },
