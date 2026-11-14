@@ -1,5 +1,6 @@
 const games = Array.from({ length: 18 }, (_, index) => ({
   title: index === 0 ? 'Cookie Clicker' : 'Placeholder Game',
+  description: 'Placeholder text',
   url: index === 0 ? 'js/index.html' : null,
   slot: index + 1,
 }));
@@ -18,12 +19,11 @@ const featuredTemplate = document.querySelector('#featured-template');
 
 function createGameControl(game) {
   const control = document.createElement(game.url ? 'a' : 'button');
+  control.setAttribute('aria-label', game.url ? `Play ${game.title}` : `Play ${game.title} ${game.slot}`);
   if (game.url) {
     control.href = game.url;
-    control.setAttribute('aria-label', `Play ${game.title}`);
   } else {
     control.type = 'button';
-    control.setAttribute('aria-label', `${game.title} ${game.slot}`);
     control.addEventListener('click', () => dialog.showModal());
   }
   return control;
@@ -34,6 +34,10 @@ function createCard(game) {
   card.className = 'game-card';
   card.append(cardTemplate.content.cloneNode(true));
   card.querySelector('.card-title').textContent = game.title;
+  const description = card.querySelector('.card-description');
+  description.textContent = game.description;
+  description.id = `game-description-${game.slot}`;
+  card.setAttribute('aria-describedby', description.id);
   return card;
 }
 
@@ -41,14 +45,14 @@ const slides = featuredGames.map((game, index) => {
   const slide = featuredTemplate.content.firstElementChild.cloneNode(true);
   slide.setAttribute('aria-label', `${index + 1} of ${featuredGames.length}`);
   slide.querySelector('.featured-title').textContent = game.title;
+  slide.querySelector('.featured-description').textContent = game.description;
 
   const play = createGameControl(game);
   play.className = 'featured-play';
-  play.setAttribute('aria-label', game.url ? `Play ${game.title}` : `Play ${game.title} ${game.slot}`);
   const icon = document.createElement('span');
   icon.className = 'play-icon';
   icon.setAttribute('aria-hidden', 'true');
-  play.append(icon, game.url ? 'Play now' : 'Play');
+  play.append(icon, 'Play');
   slide.querySelector('.featured-copy').append(play);
   return slide;
 });
@@ -85,7 +89,9 @@ function updateControls(index) {
   slideCount.textContent = `${current} / ${total}`;
   indicators.forEach((indicator, position) => {
     indicator.setAttribute('aria-current', String(index === position));
-    playControls[position].tabIndex = index === position ? 0 : -1;
+    const isActive = index === position;
+    slides[position].setAttribute('aria-hidden', String(!isActive));
+    playControls[position].tabIndex = isActive ? 0 : -1;
   });
 }
 
