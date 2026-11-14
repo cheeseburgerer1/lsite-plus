@@ -37,9 +37,9 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .site-nav a { text-decoration: none; color: var(--muted); font-size: 14px; font-weight: 650; padding: 9px 13px; border-radius: 6px; white-space: nowrap; }
 .site-nav a:hover, .site-nav a:focus-visible { color: #fff; background: #48414a; }
 
-main { padding-block: 36px 62px; }
+main { padding-block: clamp(30px, 4vw, 52px) 76px; }
 section { scroll-margin-top: 22px; }
-.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
 .section-heading :is(h1, h2) { margin: 0; display: flex; align-items: center; gap: 11px; font-size: clamp(22px, 2.4vw, 32px); font-weight: 750; letter-spacing: -.033em; line-height: 1.08; }
 .section-heading :is(h1, h2)::before { content: ""; width: 3px; height: .8em; background: var(--red); border-radius: 2px; box-shadow: 0 0 12px #ff4f6860; }
 #slide-count, .game-count { color: var(--muted); font-size: 13px; font-weight: 650; white-space: nowrap; }
@@ -57,8 +57,8 @@ section { scroll-margin-top: 22px; }
 .missing-icon::before { content: ""; position: absolute; top: -2px; right: -2px; width: 39%; height: 33%; background: currentColor; clip-path: polygon(0 0, 100% 100%, 0 100%); }
 .missing-icon > span { position: absolute; left: 50%; top: 45%; width: 44%; height: 29%; transform: translateX(-50%); background: radial-gradient(circle at 18% 20%, currentColor 1.3px, transparent 1.7px), radial-gradient(circle at 82% 20%, currentColor 1.3px, transparent 1.7px); }
 .missing-icon > span::after { content: ""; position: absolute; bottom: 0; left: 19%; width: 62%; height: 40%; border-top: 1.5px solid currentColor; border-radius: 50% 50% 0 0; }
-.card-caption { display: flex; flex: 1; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; padding: 16px; }
-.card-copy { display: grid; min-width: 0; gap: 5px; }
+.card-caption { display: flex; flex: 1; align-items: center; justify-content: space-between; gap: 18px; min-width: 0; padding: clamp(18px, 2vw, 26px); }
+.card-copy { display: grid; min-width: 0; gap: 7px; }
 .card-title { font-size: clamp(16px, 1.55vw, 19px); font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
 .card-description { color: var(--muted); font-size: 14px; line-height: 1.35; }
 .card-action {
@@ -67,8 +67,8 @@ section { scroll-margin-top: 22px; }
   justify-content: center;
   gap: 7px;
   flex: none;
-  min-height: 36px;
-  padding-inline: 10px;
+  min-height: 40px;
+  padding-inline: 14px;
   border: 1px solid #8d5968;
   border-radius: 8px;
   background: #4b3442;
@@ -264,10 +264,10 @@ section { scroll-margin-top: 22px; }
 .carousel-dot[aria-current="true"] { color: #ff8093; }
 .carousel-dot[aria-current="true"]::before { width: 15px; box-shadow: 0 0 10px #ff6c88a1; }
 
-#games { margin-top: 32px; }
-#games .section-heading { padding-bottom: 15px; border-bottom: 1px solid var(--line); }
-.game-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(10px, 1.55vw, 22px); }
-.game-grid .preview { aspect-ratio: 2.25; border-bottom: 1px solid var(--line); }
+#games { margin-top: clamp(38px, 5vw, 66px); }
+#games .section-heading { padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.game-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(14px, 2.4vw, 32px); }
+.game-grid .preview { aspect-ratio: 2.4; min-height: 88px; border-bottom: 1px solid var(--line); }
 
 dialog { width: min(420px, 100% - 36px); padding: 0; border: 1px solid var(--red-border); border-radius: 10px; background: #1b171c; color: #fff; box-shadow: 0 18px 65px #000a; }
 dialog::backdrop { background: #050507cc; }
@@ -276,16 +276,14 @@ dialog::backdrop { background: #050507cc; }
 .dialog-content p { margin: 10px 0 24px; color: var(--muted); }
 .dialog-button { padding: 10px 14px; border: 0; border-radius: 6px; background: var(--red); color: #161013; font-weight: 750; cursor: pointer; }
 
-@container (max-width: 235px) {
-  .card-caption { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px; }
+@container (max-width: 250px) {
+  .card-caption { flex-direction: column; align-items: stretch; gap: 12px; padding: 14px; }
   .card-action { align-self: flex-start; margin-top: auto; }
 }
 
 @media (max-width: 720px) {
   .header-inner { min-height: 64px; }
-  main { padding-top: 25px; }
   .site-nav a { padding-inline: 8px; }
-  .game-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 560px) {
