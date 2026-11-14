@@ -1,5 +1,5 @@
 const playableGames = [
-  { title: 'Cookie Clicker', url: 'js/index.html' },
+  { title: 'Cookie Clicker', url: 'js/' },
   {
     title: 'PolyTrack Ranked',
     description: 'Race against the clock on winding tracks.',
