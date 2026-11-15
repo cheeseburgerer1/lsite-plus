@@ -64,27 +64,27 @@
             <button type="button" class="chat-button stop" id="stop" hidden>Stop Generating</button>
           </div>
         </form>
-        <p class="chat-status" id="chat-status" role="status">First send downloads Qwen3.5-0.8B to your browser.</p>
+        <p class="chat-status" id="chat-status" role="status">Select your saved Qwen3.5-0.8B model to start chatting.</p>
       </div>
     </main>
   </div>
   <dialog id="model-dialog" class="chat-dialog" aria-labelledby="model-title">
     <div class="dialog-content">
-      <h2 id="model-title">Download lAI’s model</h2>
-      <p>lAI downloads the 4-bit Qwen3.5-0.8B model to this device’s browser storage. The first download is about 660–730 MB, depending on your browser. If you’ve typed a message, lAI will send it when the model is ready.</p>
+      <h2 id="model-title">Select your saved model</h2>
+      <p>Download Qwen3.5-0.8B (533 MB) once. When the download finishes, choose the <strong>.gguf</strong> file from Downloads or the Files app. If you already saved it, choose the file now.</p>
       <p>If the download fails, contact <a href="mailto:marchesel1@go.lisd.net">marchesel1@go.lisd.net</a>.</p>
       <div id="model-progress" class="model-progress" hidden>
-        <label for="download-progress"><span id="progress-label">Downloading model</span> <span id="percent">0%</span></label>
-        <progress id="download-progress" value="0" max="100"></progress>
+        <label id="progress-label" for="local-progress" role="status">Opening saved model…</label>
+        <progress id="local-progress"></progress>
       </div>
       <p id="model-error" class="chat-notice" role="alert" hidden></p>
       <div class="model-actions">
-        <button class="featured-play" id="download-model" type="button">Download model</button>
-        <button class="chat-button" id="pick-file" type="button">Choose .gguf file</button>
+        <a class="chat-button download-model" id="download-model" href="https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf?download=true" target="_blank" rel="noopener">Download model</a>
+        <button class="featured-play" id="pick-file" type="button">Choose saved .gguf</button>
         <button class="chat-button" id="cancel-load" type="button">Cancel</button>
       </div>
       <input id="model-file" type="file" accept=".gguf" hidden>
-      <p class="model-note">School Wi-Fi: choose a saved Qwen3.5-0.8B Q4 GGUF from Files. <a href="https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF" target="_blank" rel="noopener">Get the GGUF at home</a>.</p>
+      <p class="model-note">For offline use, open the file in lAI once while connected and keep it on the device. On iPad, you can move it to <strong>On My iPad</strong> in Files.</p>
     </div>
   </dialog>
   <dialog id="clear-dialog" class="chat-dialog" aria-labelledby="clear-title">

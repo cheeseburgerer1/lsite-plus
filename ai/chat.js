@@ -13,7 +13,7 @@ const chatError = get("chat-error");
 const modelError = get("model-error");
 const history = get("history");
 const storageKey = "lai-chats-v1";
-const idleStatus = "First send downloads Qwen3.5-0.8B to your browser.";
+const idleStatus = "Select your saved Qwen3.5-0.8B model to start chatting.";
 
 function restore() {
   try {
@@ -30,10 +30,8 @@ let ready = false;
 let generating = false;
 let queuedSend = false;
 let thinking = false;
-let loadFailed = false;
 let loadAttempt = 0;
 let activeReply;
-let lastProgress = 0;
 
 function save() {
   try {
@@ -212,7 +210,7 @@ function updateControls() {
   stop.hidden = !generating;
   stop.disabled = false;
   get("model-settings").disabled = generating || loading;
-  get("download-model").disabled = loading;
+  get("download-model").hidden = loading;
   get("pick-file").disabled = loading;
 }
 
@@ -250,7 +248,6 @@ function submitPrompt() {
   if (!ready) {
     queuedSend = true;
     openModelDialog();
-    if (!loadFailed) load("online");
     return;
   }
   clearError();
@@ -280,16 +277,8 @@ function submitPrompt() {
   });
 }
 
-function updateProgress(value, label) {
-  const next = Math.max(lastProgress, Math.min(100, Math.floor(value)));
-  lastProgress = next;
-  get("progress-label").textContent = label;
-  get("download-progress").value = next;
-  get("percent").textContent = next + "%";
-}
-
 function openModelDialog() {
-  get("model-title").textContent = ready ? "Change model" : "Download lAI’s model";
+  get("model-title").textContent = ready ? "Change model file" : "Select your saved model";
   get("model-progress").hidden = !loading;
   if (!modelDialog.open) modelDialog.showModal();
 }
@@ -299,27 +288,24 @@ function failLoad(message) {
   worker = undefined;
   loading = false;
   ready = false;
-  loadFailed = true;
   updateControls();
   showError(message);
-  updateProgress(lastProgress, "Model loading failed");
+  get("model-progress").hidden = true;
   status.textContent = "Model unavailable";
 }
 
-async function load(mode, file) {
+async function load(file) {
   if (loading || generating) return;
   const attempt = ++loadAttempt;
   worker?.terminate();
-  loadFailed = false;
   clearError();
   loading = true;
   ready = false;
-  lastProgress = 0;
   updateControls();
   get("model-progress").hidden = false;
-  updateProgress(0, mode === "file" ? "Opening local model" : "Starting download");
+  get("progress-label").textContent = "Opening saved model…";
   status.textContent = "Loading Qwen3.5-0.8B…";
-  if (mode === "file" && navigator.serviceWorker) {
+  if (navigator.serviceWorker) {
     await Promise.race([
       navigator.serviceWorker.register("./offline.js").then(() => navigator.serviceWorker.ready),
       new Promise(resolve => setTimeout(resolve, 1800))
@@ -334,14 +320,13 @@ async function load(mode, file) {
       failLoad("lAI couldn’t start or the model stopped unexpectedly.");
     });
     worker.addEventListener("message", ({ data }) => {
-      if (data.type === "progress") updateProgress(data.value, data.label);
+      if (data.type === "progress") get("progress-label").textContent = data.label;
       if (data.type === "failed") failLoad(data.message);
       if (data.type === "ready") {
         loading = false;
         ready = true;
-        updateProgress(100, "Model ready");
         updateControls();
-        status.textContent = "Qwen3.5-0.8B · " + (mode === "file" ? "Local file ready" : "Ready");
+        status.textContent = "Qwen3.5-0.8B · Local file ready";
         const shouldSend = queuedSend;
         queuedSend = false;
         modelDialog.close();
@@ -365,7 +350,7 @@ async function load(mode, file) {
         showError(data.message);
       }
     });
-    worker.postMessage({ type: "load", mode, file });
+    worker.postMessage({ type: "load", file });
   } catch {
     failLoad("lAI couldn’t start the model on this browser.");
   }
@@ -411,12 +396,11 @@ clearDialog.addEventListener("close", () => {
   switchChat(undefined);
 });
 get("model-settings").addEventListener("click", () => { queuedSend = false; openModelDialog(); });
-get("download-model").addEventListener("click", () => load("online"));
 get("pick-file").addEventListener("click", () => get("model-file").click());
 get("model-file").addEventListener("change", event => {
   const file = event.target.files[0];
   event.target.value = "";
-  if (file) load("file", file);
+  if (file) load(file);
 });
 get("cancel-load").addEventListener("click", cancelLoad);
 modelDialog.addEventListener("cancel", event => { event.preventDefault(); cancelLoad(); });

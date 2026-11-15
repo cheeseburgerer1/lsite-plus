@@ -1,4 +1,4 @@
-const name = "lai-offline-v1";
+const name = "lai-offline-v2";
 const shell = ["chat.html", "chat.css", "chat.js", "ai-worker.js", "menu.css", "Roboto-Variable.ttf"];
 
 self.addEventListener("install", event => {
