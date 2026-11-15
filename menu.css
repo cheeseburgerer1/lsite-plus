@@ -44,6 +44,8 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .site-nav { display: flex; align-items: center; gap: 5px; }
 .site-nav a { text-decoration: none; color: var(--muted); font-size: 14px; font-weight: 650; padding: 9px 13px; border-radius: 6px; white-space: nowrap; }
 .site-nav a:hover, .site-nav a:focus-visible { color: #fff; background: #48414a; }
+.site-nav .nav-ai { color: var(--red); }
+.site-nav .nav-ai:hover, .site-nav .nav-ai:focus-visible { color: #fff; }
 
 main { padding-block: clamp(30px, 4vw, 52px) 76px; }
 section { scroll-margin-top: 22px; }
@@ -324,6 +326,7 @@ dialog::backdrop { background: #050507cc; }
 }
 
 @media (max-width: 365px) {
+  .header-inner { flex-wrap: wrap; gap: 6px; padding-block: 10px; }
   .carousel-controls { grid-template-columns: 1fr auto; }
   .carousel-dots { justify-self: start; }
   #slide-count { position: absolute; clip-path: inset(50%); }
