@@ -1,5 +1,5 @@
-const name = "lai-offline-v2";
-const shell = ["chat.html", "chat.css", "chat.js", "ai-worker.js", "menu.css", "Roboto-Variable.ttf"];
+const name = "lai-offline-v3";
+const shell = ["chat.html", "chat.css", "chat.js", "ai-worker.js", "menu.css", "Roboto-Variable.ttf", "runtime/katex.mjs"];
 
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(name).then(cache => cache.addAll(shell)).then(() => self.skipWaiting()));

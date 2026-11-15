@@ -77,6 +77,8 @@
 .message-assistant .message-bubble { border-top-left-radius: 5px; }
 .message-text { white-space: pre-wrap; margin: 0; }
 .message-text + .message-text { margin-top: .6em; }
+.message-math, .message-equation { white-space: normal; }
+.message-equation { display: block; overflow-x: auto; margin-block: .35em; }
 .message-bubble code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .message-text code { padding: 2px 4px; border-radius: 3px; background: #25252b; }
 .thought { margin: 0 0 9px; color: var(--muted); }
@@ -99,6 +101,7 @@
 .thinking[aria-pressed="true"], .stop { border-color: var(--red-border); }
 .thinking[aria-pressed="true"] span { color: var(--red); }
 .chat-status { text-align: center; margin: 9px 0 0; font-size: 13px; color: var(--muted); }
+.chat-disclaimer { text-align: center; margin: 4px 0 0; font-size: 12px; color: var(--muted); }
 .chat-notice { padding: 9px 12px; margin: 0 0 8px; border: 1px solid var(--red-border); border-radius: 8px; background: #4b3442; color: #ffe1e5; font-size: 14px; line-height: 1.35; }
 .chat-notice a, .chat-dialog a { color: var(--red); overflow-wrap: anywhere; }
 .chat-page .chat-dialog { max-height: calc(100dvh - 32px); width: min(500px, calc(100% - 32px)); border-color: var(--red-border); }

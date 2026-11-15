@@ -1,4 +1,4 @@
-const system = { role: "system", content: "You are lAI, a personal assistant that helps users of this site." };
+const system = { role: "system", content: "You are LAI, a personal assistant that helps users of this site." };
 const runtime = new URL("./runtime/", import.meta.url);
 let run;
 let stopping;
@@ -8,7 +8,7 @@ function emit(text) { if (text) postMessage({ type: "token", text }); }
 
 async function fileEngine(file) {
   if (!file || !file.name.toLowerCase().endsWith(".gguf") || file.size > 650_000_000) {
-    throw new Error("Choose a Qwen3.5-0.8B Q4 GGUF file under 650 MB.");
+    throw new Error("Choose the LAI model file (.gguf, under 650 MB).");
   }
   const header = new Uint8Array(await file.slice(0, 4).arrayBuffer());
   if (String.fromCharCode(...header) !== "GGUF") throw new Error("This file is not a valid GGUF.");
@@ -25,7 +25,7 @@ async function fileEngine(file) {
   });
   const metadata = model.getModelMetadata();
   if (metadata.meta["general.architecture"] !== "qwen35" || metadata.hparams.nEmbd !== 1024 || ![24, 25].includes(metadata.hparams.nLayer)) {
-    throw new Error("This file is not a Qwen3.5-0.8B model.");
+    throw new Error("This model file is incompatible with LAI. Choose the LAI model file.");
   }
 
   return async (messages, thinking) => {
@@ -85,7 +85,7 @@ self.addEventListener("message", async ({ data }) => {
       postMessage({ type: "finished", stopped: generating === "stopped" });
     } catch (error) {
       if (generating === "stopped") postMessage({ type: "finished", stopped: true });
-      else postMessage({ type: "generation-error", message: error?.message || "lAI couldn’t generate a reply." });
+      else postMessage({ type: "generation-error", message: error?.message || "LAI couldn’t generate a reply." });
     } finally {
       stopping = undefined;
       generating = false;

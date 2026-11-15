@@ -1,3 +1,5 @@
+import katex from "./runtime/katex.mjs";
+
 const get = id => document.getElementById(id);
 const prompt = get("prompt");
 const messages = get("messages");
@@ -13,7 +15,17 @@ const chatError = get("chat-error");
 const modelError = get("model-error");
 const history = get("history");
 const storageKey = "lai-chats-v1";
-const idleStatus = "Select your saved Qwen3.5-0.8B model to start chatting.";
+const idleStatus = "Select your saved model to start chatting.";
+const newChatTitle = "New Chat";
+const inlineMarkup = new RegExp([
+  /\u0060(?<code>[^\u0060\n]+)\u0060/,
+  /\$\$(?<displayDollar>[\s\S]+?)\$\$/,
+  /\\\[(?<displayBracket>[\s\S]+?)\\\]/,
+  /\\\((?<inlineParenthesis>[\s\S]+?)\\\)/,
+  /\$(?![\s$])(?<inlineDollar>(?:\\.|[^\\$\r\n])*?(?:\\.|[^\s\\$]))\$(?![$\d])/,
+  /(?<bold>\*\*)/,
+  /\\(?<escaped>[\\\u0060*$])/
+].map(pattern => pattern.source).join("|"), "g");
 
 function restore() {
   try {
@@ -48,6 +60,7 @@ function clearError() {
 }
 
 function showError(message) {
+  message = message.replace(/qwen[\w.-]*/gi, "the LAI model");
   chatError.querySelector("span").textContent = message + " Contact";
   chatError.hidden = false;
   modelError.textContent = message;
@@ -65,7 +78,7 @@ function drawHistory() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "chat-button";
-    button.textContent = chat.messages.find(message => message.role === "user")?.content.trim().replace(/\s+/g, " ").slice(0, 65) || "New Chat";
+    button.textContent = chat.title || chat.messages.find(message => message.role === "user")?.content.trim().replace(/\s+/g, " ").slice(0, 65) || newChatTitle;
     if (chat === activeChat) button.setAttribute("aria-current", "true");
     button.addEventListener("click", () => switchChat(chat));
     item.append(button);
@@ -95,15 +108,46 @@ function splitThought(message, inProgress = false) {
 function textBlock(text) {
   const paragraph = document.createElement("p");
   paragraph.className = "message-text";
-  text.split(/(`[^`\n]+`)/).forEach((part, index) => {
-    if (index % 2 === 0) paragraph.append(part);
-    else {
+
+  let offset = 0;
+  let bold;
+  for (const match of text.matchAll(inlineMarkup)) {
+    const parent = bold || paragraph;
+    parent.append(text.slice(offset, match.index));
+    offset = match.index + match[0].length;
+    const { code: codeText, displayDollar, displayBracket, inlineParenthesis, inlineDollar, bold: marker, escaped } = match.groups;
+
+    if (marker && bold && /\S/.test(text[match.index - 1] || "")) {
+      paragraph.append(bold);
+      bold = undefined;
+    } else if (marker && !bold && /\S/.test(text[offset] || "")) {
+      bold = document.createElement("strong");
+    } else if (codeText !== undefined) {
       const code = document.createElement("code");
-      code.textContent = part.slice(1, -1);
-      paragraph.append(code);
+      code.textContent = codeText;
+      parent.append(code);
+    } else if (escaped !== undefined) {
+      parent.append(escaped);
+    } else {
+      const formula = displayDollar ?? displayBracket ?? inlineParenthesis ?? inlineDollar;
+      if (formula === undefined) parent.append(match[0]);
+      else parent.append(mathSpan(formula, displayDollar !== undefined || displayBracket !== undefined, match[0]));
     }
-  });
+  }
+  (bold || paragraph).append(text.slice(offset));
+  if (bold) paragraph.append("**", ...bold.childNodes);
   return paragraph;
+}
+
+function mathSpan(formula, displayMode, original) {
+  const span = document.createElement("span");
+  span.className = displayMode ? "message-equation" : "message-math";
+  try {
+    katex.render(formula.trim(), span, { displayMode, output: "mathml", trust: false, maxExpand: 150, maxSize: 20 });
+    return span;
+  } catch {
+    return original;
+  }
 }
 
 function codeBlock(language, text) {
@@ -153,7 +197,7 @@ function renderAnswer(bubble, content, inProgress = false) {
     accordion.append(summary, text);
     bubble.prepend(accordion);
   }
-  if (thought) accordion.lastElementChild.textContent = thought;
+  if (thought) accordion.lastElementChild.replaceWith(textBlock(thought));
   else accordion?.remove();
   const body = bubble.lastElementChild;
   const items = [];
@@ -175,7 +219,7 @@ function messageElement(message, inProgress = false) {
   article.className = "message message-" + message.role;
   const label = document.createElement("strong");
   label.className = "message-label";
-  label.textContent = message.role === "user" ? "You" : "lAI";
+  label.textContent = message.role === "user" ? "You" : "LAI";
   const bubble = document.createElement("div");
   bubble.className = "message-bubble";
   if (message.role === "user") bubble.textContent = message.content;
@@ -252,7 +296,7 @@ function submitPrompt() {
   }
   clearError();
   if (!activeChat) {
-    activeChat = { id: crypto.randomUUID(), messages: [] };
+    activeChat = { id: crypto.randomUUID(), title: newChatTitle, messages: [] };
     conversations.chats.unshift(activeChat);
     conversations.activeId = activeChat.id;
   }
@@ -304,7 +348,7 @@ async function load(file) {
   updateControls();
   get("model-progress").hidden = false;
   get("progress-label").textContent = "Opening saved model…";
-  status.textContent = "Loading Qwen3.5-0.8B…";
+  status.textContent = "Loading the saved model…";
   if (navigator.serviceWorker) {
     await Promise.race([
       navigator.serviceWorker.register("./offline.js").then(() => navigator.serviceWorker.ready),
@@ -317,7 +361,7 @@ async function load(file) {
     worker.addEventListener("error", event => {
       event.preventDefault();
       if (activeReply) finishReply("Generation stopped");
-      failLoad("lAI couldn’t start or the model stopped unexpectedly.");
+      failLoad("LAI couldn’t start or the model stopped unexpectedly.");
     });
     worker.addEventListener("message", ({ data }) => {
       if (data.type === "progress") get("progress-label").textContent = data.label;
@@ -326,7 +370,7 @@ async function load(file) {
         loading = false;
         ready = true;
         updateControls();
-        status.textContent = "Qwen3.5-0.8B · Local file ready";
+        status.textContent = "Local model ready";
         const shouldSend = queuedSend;
         queuedSend = false;
         modelDialog.close();
@@ -344,7 +388,7 @@ async function load(file) {
           if (nearEnd) scrollToLatest();
         });
       }
-      if (data.type === "finished") finishReply(data.stopped ? "Generation stopped" : "Qwen3.5-0.8B · Ready");
+      if (data.type === "finished") finishReply(data.stopped ? "Generation stopped" : "Local model ready");
       if (data.type === "generation-error") {
         finishReply("Generation stopped");
         showError(data.message);
@@ -352,7 +396,7 @@ async function load(file) {
     });
     worker.postMessage({ type: "load", file });
   } catch {
-    failLoad("lAI couldn’t start the model on this browser.");
+    failLoad("LAI couldn’t start the model on this browser.");
   }
 }
 
@@ -423,11 +467,11 @@ for (const button of document.querySelectorAll("[data-export]")) {
     if (!activeChat?.messages.length) return;
     const type = button.dataset.export;
     const content = type === "json" ? JSON.stringify(activeChat.messages, null, 2)
-      : activeChat.messages.map(message => (message.role === "user" ? "You" : "lAI") + "\n" + message.content).join("\n\n");
+      : activeChat.messages.map(message => (message.role === "user" ? "You" : "LAI") + "\n" + message.content).join("\n\n");
     const url = URL.createObjectURL(new Blob([content], { type: type === "json" ? "application/json" : "text/plain" }));
     const link = document.createElement("a");
     link.href = url;
-    link.download = "lAI-chat." + type;
+    link.download = "LAI-chat." + type;
     document.body.append(link);
     link.click();
     link.remove();

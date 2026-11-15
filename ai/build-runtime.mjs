@@ -10,6 +10,8 @@ const runtime = join(site, "runtime");
 await mkdir(runtime, { recursive: true });
 await cp(join(modules, "@wllama", "wllama", "esm"), join(runtime, "wllama"), { recursive: true });
 await cp(join(modules, "@wllama", "wllama-compat", "wasm"), join(runtime, "wllama-compat"), { recursive: true });
+await copyFile(join(modules, "katex", "dist", "katex.mjs"), join(runtime, "katex.mjs"));
+await copyFile(join(modules, "katex", "LICENSE"), join(runtime, "katex.LICENSE"));
 for (const name of ["wllama/index.js", "wllama/wasm/wllama.wasm", "wllama-compat/wllama.js", "wllama-compat/wllama.wasm"]) {
   await access(join(runtime, name));
 }
