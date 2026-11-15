@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#25252b">
+  <meta name="description" content="Chat with lAI, an assistant that runs on your device.">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="menu.css">
+  <link rel="stylesheet" href="chat.css">
+  <script src="chat.js" type="module"></script>
+  <title>lAI</title>
+</head>
+<body class="chat-page">
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="chat-header-start">
+        <button id="show-history" class="chat-button history-toggle" type="button" aria-controls="history" aria-expanded="false">Chats</button>
+        <a class="brand" href="chat.html"><span class="brand-mark" aria-hidden="true"></span><span>l<em>AI</em></span></a>
+      </div>
+      <nav class="site-nav" aria-label="Main navigation">
+        <a href="https://lsite-plus.onrender.com/">← Arcade</a>
+        <a class="nav-ai" href="chat.html" aria-current="page">Chat</a>
+      </nav>
+    </div>
+  </header>
+  <div class="chat-layout">
+    <aside class="chat-sidebar" id="history" aria-label="Chat history">
+      <button class="chat-button new-chat" id="new-chat" type="button"><span aria-hidden="true">＋</span> New Chat</button>
+      <h2>Recents</h2>
+      <ul class="chat-history" id="chat-list"></ul>
+      <div class="history-actions">
+        <details class="export">
+          <summary class="chat-button">Export Chat</summary>
+          <button class="chat-button" type="button" data-export="txt">Plain text (.txt)</button>
+          <button class="chat-button" type="button" data-export="json">JSON (.json)</button>
+        </details>
+        <button class="chat-button clear-history" id="clear-history" type="button">Clear History</button>
+      </div>
+    </aside>
+    <main class="chat-main" aria-label="lAI chat">
+      <div class="chat-scroll" id="chat-scroll" tabindex="0" aria-label="Conversation">
+        <div class="chat-thread">
+          <div class="chat-welcome" id="welcome">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <h1>What’s on your mind?</h1>
+            <p>Chat with lAI. Your messages stay on this device.</p>
+          </div>
+          <div class="messages" id="messages"></div>
+        </div>
+      </div>
+      <div class="composer-area">
+        <p id="thinking-warning" class="chat-notice" role="alert" hidden>Warning: Thinking Mode improves logic on hard questions, but will respond slower and may cause lag or tab reloads on older iPads.</p>
+        <p id="chat-error" class="chat-notice" role="alert" hidden><span></span> <a href="mailto:marchesel1@go.lisd.net">marchesel1@go.lisd.net</a>.</p>
+        <p id="storage-error" class="chat-notice" role="status" hidden>Chat history couldn’t be saved on this device. Export the chat to keep a copy.</p>
+        <form id="composer" class="composer">
+          <textarea id="prompt" rows="2" maxlength="4000" aria-label="Message lAI" placeholder="Message lAI"></textarea>
+          <div class="composer-controls">
+            <div class="composer-options">
+              <button type="button" class="chat-button thinking" id="thinking" aria-pressed="false">Thinking Mode <span aria-hidden="true">Off</span></button>
+              <button type="button" class="chat-button" id="model-settings">Model</button>
+            </div>
+            <button type="submit" class="featured-play send" id="send">Send <span aria-hidden="true">↑</span></button>
+            <button type="button" class="chat-button stop" id="stop" hidden>Stop Generating</button>
+          </div>
+        </form>
+        <p class="chat-status" id="chat-status" role="status">First send downloads Qwen3.5-0.8B to your browser.</p>
+      </div>
+    </main>
+  </div>
+  <dialog id="model-dialog" class="chat-dialog" aria-labelledby="model-title">
+    <div class="dialog-content">
+      <h2 id="model-title">Download lAI’s model</h2>
+      <p>lAI downloads the 4-bit Qwen3.5-0.8B model to this device’s browser storage. The first download is about 660–730 MB, depending on your browser. If you’ve typed a message, lAI will send it when the model is ready.</p>
+      <p>If the download fails, contact <a href="mailto:marchesel1@go.lisd.net">marchesel1@go.lisd.net</a>.</p>
+      <div id="model-progress" class="model-progress" hidden>
+        <label for="download-progress"><span id="progress-label">Downloading model</span> <span id="percent">0%</span></label>
+        <progress id="download-progress" value="0" max="100"></progress>
+      </div>
+      <p id="model-error" class="chat-notice" role="alert" hidden></p>
+      <div class="model-actions">
+        <button class="featured-play" id="download-model" type="button">Download model</button>
+        <button class="chat-button" id="pick-file" type="button">Choose .gguf file</button>
+        <button class="chat-button" id="cancel-load" type="button">Cancel</button>
+      </div>
+      <input id="model-file" type="file" accept=".gguf" hidden>
+      <p class="model-note">School Wi-Fi: choose a saved Qwen3.5-0.8B Q4 GGUF from Files. <a href="https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF" target="_blank" rel="noopener">Get the GGUF at home</a>.</p>
+    </div>
+  </dialog>
+  <dialog id="clear-dialog" class="chat-dialog" aria-labelledby="clear-title">
+    <form class="dialog-content" method="dialog">
+      <h2 id="clear-title">Clear chat history?</h2>
+      <p>This deletes all lAI conversations saved on this device.</p>
+      <div class="model-actions">
+        <button class="chat-button" value="cancel" autofocus>Cancel</button>
+        <button class="featured-play" value="clear">Clear History</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>
