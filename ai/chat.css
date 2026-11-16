@@ -76,14 +76,21 @@
 .message-user .message-bubble { white-space: pre-wrap; background: #4b3442; border-color: var(--red-border); border-bottom-right-radius: 4px; }
 .message-assistant .message-bubble { border-top-left-radius: 5px; }
 .message-text { white-space: pre-wrap; margin: 0; }
-.message-text + .message-text { margin-top: .6em; }
+.message-content > :not(:first-child) { margin-block-start: .6em; }
+.message-content :is(h1, h2, h3, h4, h5, h6) { font-size: 1.06em; line-height: 1.35; }
+.message-content :is(h1, h2) { font-size: 1.2em; }
+.message-content :is(ul, ol) { margin-block: 0; padding-inline-start: 1.55em; }
+.message-content li + li { margin-block-start: .2em; }
+.message-content li > :is(ul, ol) { margin-block-start: .22em; }
+.message-content blockquote { margin: 0; padding-inline-start: .75em; border-inline-start: 2px solid var(--line); }
+.message-content hr { border: 0; border-top: 1px solid var(--line); margin-block: .65em; }
 .message-math, .message-equation { white-space: normal; }
 .message-equation { display: block; overflow-x: auto; margin-block: .35em; }
 .message-bubble code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .message-text code { padding: 2px 4px; border-radius: 3px; background: #25252b; }
 .thought { margin: 0 0 9px; color: var(--muted); }
 .thought summary { cursor: pointer; width: fit-content; align-content: center; min-height: 44px; color: var(--red); font-size: 14px; font-weight: 650; }
-.thought p { border-inline-start: 2px solid var(--line); padding-inline-start: 12px; }
+.thought-content { border-inline-start: 2px solid var(--line); padding-inline-start: 12px; }
 .code-block { margin-block: 10px; background: #25252b; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .code-tools { display: flex; align-items: center; justify-content: space-between; padding: 3px 6px 3px 11px; border-bottom: 1px solid var(--line); color: var(--muted); gap: 8px; font-size: 13px; }
 .code-tools button { border-color: transparent; }

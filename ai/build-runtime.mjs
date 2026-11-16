@@ -12,6 +12,8 @@ await cp(join(modules, "@wllama", "wllama", "esm"), join(runtime, "wllama"), { r
 await cp(join(modules, "@wllama", "wllama-compat", "wasm"), join(runtime, "wllama-compat"), { recursive: true });
 await copyFile(join(modules, "katex", "dist", "katex.mjs"), join(runtime, "katex.mjs"));
 await copyFile(join(modules, "katex", "LICENSE"), join(runtime, "katex.LICENSE"));
+await copyFile(join(modules, "marked", "lib", "marked.esm.js"), join(runtime, "marked.mjs"));
+await copyFile(join(modules, "marked", "LICENSE"), join(runtime, "marked.LICENSE"));
 for (const name of ["wllama/index.js", "wllama/wasm/wllama.wasm", "wllama-compat/wllama.js", "wllama-compat/wllama.wasm"]) {
   await access(join(runtime, name));
 }

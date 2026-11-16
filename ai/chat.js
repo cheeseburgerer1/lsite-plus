@@ -1,4 +1,5 @@
 import katex from "./runtime/katex.mjs";
+import { Marked } from "./runtime/marked.mjs";
 
 const get = id => document.getElementById(id);
 const prompt = get("prompt");
@@ -26,6 +27,19 @@ const inlineMarkup = new RegExp([
   /(?<bold>\*\*)/,
   /\\(?<escaped>[\\\u0060*$])/
 ].map(pattern => pattern.source).join("|"), "g");
+const displayMath = /^(?: {0,3}\$\$([\s\S]+?)\$\$| {0,3}\\\[([\s\S]+?)\\\])[ \t]*(?:\n|$)/m;
+const markdown = new Marked({
+  gfm: false,
+  extensions: [{
+    name: "displayMath",
+    level: "block",
+    start(source) { return source.search(displayMath); },
+    tokenizer(source) {
+      const match = displayMath.exec(source);
+      if (match?.index === 0) return { type: "displayMath", raw: match[0], text: match[1] ?? match[2] };
+    }
+  }]
+});
 
 function restore() {
   try {
@@ -105,8 +119,8 @@ function splitThought(message, inProgress = false) {
   return { answer: shownAnswer.trim(), thought: thoughts.join("\n\n") };
 }
 
-function textBlock(text) {
-  const paragraph = document.createElement("p");
+function textBlock(text, tag = "p") {
+  const paragraph = document.createElement(tag);
   paragraph.className = "message-text";
 
   let offset = 0;
@@ -184,6 +198,52 @@ function codeBlock(language, text) {
   return block;
 }
 
+function renderBlocks(tokens) {
+  const fragment = document.createDocumentFragment();
+  for (const token of tokens) {
+    switch (token.type) {
+      case "space":
+        break;
+      case "heading":
+        fragment.append(textBlock(token.text, "h" + token.depth));
+        break;
+      case "list": {
+        const list = document.createElement(token.ordered ? "ol" : "ul");
+        if (token.ordered) list.start = token.start;
+        for (const entry of token.items) {
+          const item = document.createElement("li");
+          item.append(renderBlocks(entry.tokens));
+          list.append(item);
+        }
+        fragment.append(list);
+        break;
+      }
+      case "blockquote": {
+        const quote = document.createElement("blockquote");
+        quote.append(renderBlocks(token.tokens));
+        fragment.append(quote);
+        break;
+      }
+      case "hr":
+        fragment.append(document.createElement("hr"));
+        break;
+      case "code":
+        fragment.append(codeBlock(token.lang?.trim().split(/\s+/, 1)[0], token.text));
+        break;
+      case "displayMath":
+        fragment.append(mathSpan(token.text, true, token.raw.trim()));
+        break;
+      case "paragraph":
+      case "text":
+        fragment.append(textBlock(token.text));
+        break;
+      default:
+        fragment.append(textBlock(token.raw.trimEnd()));
+    }
+  }
+  return fragment;
+}
+
 function renderAnswer(bubble, content, inProgress = false) {
   const { answer, thought } = splitThought(content, inProgress);
   let accordion = bubble.querySelector(".thought");
@@ -192,26 +252,16 @@ function renderAnswer(bubble, content, inProgress = false) {
     accordion.className = "thought";
     const summary = document.createElement("summary");
     summary.textContent = "Thought Process";
-    const text = document.createElement("p");
-    text.className = "message-text";
-    accordion.append(summary, text);
+    const details = document.createElement("div");
+    details.className = "message-content thought-content";
+    accordion.append(summary, details);
     bubble.prepend(accordion);
   }
-  if (thought) accordion.lastElementChild.replaceWith(textBlock(thought));
+  if (thought) accordion.lastElementChild.replaceChildren(renderBlocks(markdown.lexer(thought)));
   else accordion?.remove();
   const body = bubble.lastElementChild;
-  const items = [];
-  let offset = 0;
-  for (const match of answer.matchAll(/(?:^|\n) *```([\w.+#-]*)[ \t]*\n([\s\S]*?)(?:\n?```|$)/g)) {
-    const prose = answer.slice(offset, match.index).trim();
-    if (prose) items.push(textBlock(prose));
-    items.push(codeBlock(match[1], match[2]));
-    offset = match.index + match[0].length;
-  }
-  const remaining = answer.slice(offset).trim();
-  if (remaining) items.push(textBlock(remaining));
-  if (!items.length && inProgress) items.push(textBlock(thought ? "Thinking…" : "Generating…"));
-  body.replaceChildren(...items);
+  const text = answer || (inProgress ? (thought ? "Thinking…" : "Generating…") : "");
+  body.replaceChildren(renderBlocks(markdown.lexer(text)));
 }
 
 function messageElement(message, inProgress = false) {
@@ -224,7 +274,9 @@ function messageElement(message, inProgress = false) {
   bubble.className = "message-bubble";
   if (message.role === "user") bubble.textContent = message.content;
   else {
-    bubble.append(document.createElement("div"));
+    const content = document.createElement("div");
+    content.className = "message-content";
+    bubble.append(content);
     renderAnswer(bubble, message.content, inProgress);
   }
   article.append(label, bubble);
