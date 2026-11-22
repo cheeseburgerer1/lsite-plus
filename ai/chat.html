@@ -69,6 +69,33 @@
       </div>
     </main>
   </div>
+  <div class="chat-actions" id="chat-actions" hidden>
+    <button class="chat-button" id="rename-chat-action" type="button">Rename</button>
+    <button class="chat-button chat-delete" id="delete-chat-action" type="button">Delete</button>
+  </div>
+  <dialog id="rename-chat-dialog" class="chat-dialog" aria-labelledby="rename-chat-title">
+    <form class="dialog-content" method="dialog">
+      <h2 id="rename-chat-title">Rename chat</h2>
+      <label class="chat-title-field" for="chat-title-input">
+        Chat name
+        <input id="chat-title-input" name="title" type="text" autocomplete="off" required autofocus>
+      </label>
+      <div class="model-actions">
+        <button class="featured-play" value="rename">Save</button>
+        <button class="chat-button" value="cancel" formnovalidate>Cancel</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="delete-chat-dialog" class="chat-dialog" aria-labelledby="delete-chat-title">
+    <form class="dialog-content" method="dialog">
+      <h2 id="delete-chat-title">Delete chat?</h2>
+      <p>Delete <strong id="chat-to-delete"></strong> from this device?</p>
+      <div class="model-actions">
+        <button class="chat-button" value="cancel" autofocus>Cancel</button>
+        <button class="chat-button chat-delete" value="delete">Delete chat</button>
+      </div>
+    </form>
+  </dialog>
   <dialog id="model-dialog" class="chat-dialog" aria-labelledby="model-title">
     <div class="dialog-content">
       <h2 id="model-title">Select your saved model</h2>

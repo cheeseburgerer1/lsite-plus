@@ -5,6 +5,12 @@ const get = id => document.getElementById(id);
 const prompt = get("prompt");
 const messages = get("messages");
 const chatList = get("chat-list");
+const chatActions = get("chat-actions");
+const renameChatAction = get("rename-chat-action");
+const deleteChatAction = get("delete-chat-action");
+const renameChatDialog = get("rename-chat-dialog");
+const deleteChatDialog = get("delete-chat-dialog");
+const chatTitleInput = get("chat-title-input");
 const scroll = get("chat-scroll");
 const modelDialog = get("model-dialog");
 const clearDialog = get("clear-dialog");
@@ -58,6 +64,8 @@ let queuedSend = false;
 let thinking = false;
 let loadAttempt = 0;
 let activeReply;
+let openChatActions;
+let chatActionTarget;
 
 function save() {
   try {
@@ -82,20 +90,68 @@ function showError(message) {
 }
 
 function setHistoryOpen(open) {
+  if (!open) closeChatActions();
   history.classList.toggle("is-open", open);
   get("show-history").setAttribute("aria-expanded", String(open));
 }
 
+function chatTitle(chat) {
+  return chat.title || chat.messages.find(message => message.role === "user")?.content.trim().replace(/\s+/g, " ").slice(0, 65) || newChatTitle;
+}
+
+function closeChatActions(restoreFocus = false) {
+  if (!openChatActions) return;
+  const { trigger } = openChatActions;
+  openChatActions = undefined;
+  trigger.setAttribute("aria-expanded", "false");
+  chatActions.hidden = true;
+  document.body.append(chatActions);
+  if (restoreFocus) trigger.focus({ preventScroll: true });
+}
+
+function toggleChatActions(chat, trigger, titleButton) {
+  const wasOpen = openChatActions?.trigger === trigger;
+  closeChatActions();
+  if (wasOpen) return;
+
+  openChatActions = { chat, trigger, titleButton };
+  trigger.setAttribute("aria-expanded", "true");
+  deleteChatAction.disabled = generating && chat === activeChat;
+  trigger.after(chatActions);
+  chatActions.hidden = false;
+  const anchor = trigger.getBoundingClientRect();
+  const { offsetWidth: width, offsetHeight: height } = chatActions;
+  const { clientWidth, clientHeight } = document.documentElement;
+  const gap = 4;
+  const margin = 8;
+  const top = anchor.bottom + gap + height <= clientHeight - margin
+    ? anchor.bottom + gap : anchor.top - height - gap;
+  chatActions.style.top = Math.max(margin, top) + "px";
+  chatActions.style.left = Math.max(margin, Math.min(anchor.right - width, clientWidth - width - margin)) + "px";
+  renameChatAction.focus({ preventScroll: true });
+}
+
 function drawHistory() {
+  closeChatActions();
   const items = conversations.chats.map(chat => {
+    const title = chatTitle(chat);
     const item = document.createElement("li");
+    item.className = "chat-history-item";
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "chat-button";
-    button.textContent = chat.title || chat.messages.find(message => message.role === "user")?.content.trim().replace(/\s+/g, " ").slice(0, 65) || newChatTitle;
+    button.className = "chat-button chat-select";
+    button.textContent = title;
     if (chat === activeChat) button.setAttribute("aria-current", "true");
     button.addEventListener("click", () => switchChat(chat));
-    item.append(button);
+    const options = document.createElement("button");
+    options.type = "button";
+    options.className = "chat-button chat-options";
+    options.textContent = "⋯";
+    options.setAttribute("aria-label", "Actions for " + title);
+    options.setAttribute("aria-controls", chatActions.id);
+    options.setAttribute("aria-expanded", "false");
+    options.addEventListener("click", () => toggleChatActions(chat, options, button));
+    item.append(button, options);
     return item;
   });
   if (!items.length) {
@@ -308,6 +364,7 @@ function updateControls() {
   get("model-settings").disabled = generating || loading;
   get("download-model").hidden = loading;
   get("pick-file").disabled = loading;
+  if (openChatActions) deleteChatAction.disabled = generating && openChatActions.chat === activeChat;
 }
 
 function finishReply(note) {
@@ -480,6 +537,76 @@ thinkingButton.addEventListener("click", () => {
 });
 get("new-chat").addEventListener("click", () => switchChat(undefined));
 get("show-history").addEventListener("click", () => setHistoryOpen(!history.classList.contains("is-open")));
+
+document.addEventListener("pointerdown", event => {
+  if (openChatActions && !chatActions.contains(event.target) && event.target !== openChatActions.trigger) {
+    closeChatActions(chatActions.contains(document.activeElement));
+  }
+});
+document.addEventListener("focusin", event => {
+  if (openChatActions && !chatActions.contains(event.target) && event.target !== openChatActions.trigger) closeChatActions();
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && openChatActions) {
+    event.preventDefault();
+    closeChatActions(true);
+  }
+});
+chatList.addEventListener("scroll", () => closeChatActions(true));
+window.addEventListener("resize", () => closeChatActions(true));
+
+renameChatAction.addEventListener("click", () => {
+  chatActionTarget = openChatActions;
+  closeChatActions(true);
+  chatTitleInput.value = chatTitle(chatActionTarget.chat);
+  chatTitleInput.setCustomValidity("");
+  renameChatDialog.returnValue = "";
+  renameChatDialog.showModal();
+  chatTitleInput.select();
+});
+chatTitleInput.addEventListener("input", () => chatTitleInput.setCustomValidity(""));
+renameChatDialog.querySelector("form").addEventListener("submit", event => {
+  if (event.submitter?.value !== "cancel" && !chatTitleInput.value.trim()) {
+    event.preventDefault();
+    chatTitleInput.setCustomValidity("Enter a chat name.");
+    chatTitleInput.reportValidity();
+  }
+});
+renameChatDialog.addEventListener("close", () => {
+  const { chat, trigger, titleButton } = chatActionTarget;
+  chatActionTarget = undefined;
+  if (renameChatDialog.returnValue !== "rename") return;
+  chat.title = chatTitleInput.value.trim();
+  titleButton.textContent = chat.title;
+  trigger.setAttribute("aria-label", "Actions for " + chat.title);
+  save();
+});
+
+deleteChatAction.addEventListener("click", () => {
+  chatActionTarget = openChatActions;
+  closeChatActions(true);
+  get("chat-to-delete").textContent = chatTitle(chatActionTarget.chat);
+  deleteChatDialog.returnValue = "";
+  deleteChatDialog.showModal();
+});
+deleteChatDialog.addEventListener("close", () => {
+  const { chat } = chatActionTarget;
+  chatActionTarget = undefined;
+  if (deleteChatDialog.returnValue !== "delete" || (generating && chat === activeChat)) return;
+
+  const index = conversations.chats.indexOf(chat);
+  conversations.chats.splice(index, 1);
+  const nextIndex = Math.min(index, conversations.chats.length - 1);
+  if (chat === activeChat) switchChat(conversations.chats[nextIndex]);
+  else {
+    save();
+    drawHistory();
+  }
+  const focusTarget = get("show-history").offsetWidth && !history.classList.contains("is-open")
+    ? get("show-history") : chatList.querySelectorAll(".chat-options")[nextIndex] || get("new-chat");
+  focusTarget.focus();
+});
+
 get("clear-history").addEventListener("click", () => {
   if (!generating) {
     clearDialog.returnValue = "";
